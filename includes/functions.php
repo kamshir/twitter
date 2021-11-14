@@ -23,6 +23,12 @@ function get_page_title($title = '')
   }
 }
 
+function redirect($link = HOST)
+{
+  header("Location: $link");
+  die;
+}
+
 function db()
 {
   try {
@@ -50,8 +56,11 @@ function db_query($sql, $exec = false)
   return db()->query($sql);
 }
 
-function get_posts($user_id = 0)
+function get_posts($user_id = 0, $sort = false)
 {
+  $sorting = 'DESC';
+  if ($sort) $sorting = 'ASC';
+
   if ($user_id > 0) {
     return db_query(
       "SELECT posts.*, users.name, users.login, users.avatar
@@ -59,7 +68,7 @@ function get_posts($user_id = 0)
       JOIN `users`
       ON users.id = posts.user_id
       WHERE posts.user_id = $user_id
-      ORDER BY posts.text DESC"
+      ORDER BY posts.text $sorting"
     )->fetchAll();
   }
 
@@ -67,7 +76,8 @@ function get_posts($user_id = 0)
     "SELECT posts.*, users.name, users.login, users.avatar
     FROM `posts`
     JOIN `users`
-    ON users.id = posts.user_id"
+    ON users.id = posts.user_id
+    ORDER BY posts.`date` $sorting;"
   )->fetchAll();
 }
 
@@ -95,18 +105,18 @@ function register_user($auth_data)
   $user = get_user_info($auth_data['login']);
   if (!empty($user)) {
     $_SESSION['error'] = 'Пользователь ' . $auth_data['login'] . ' уже существует';
-    header("Location: " . get_url('register.php'));
+    redirect(get_url('register.php'));
     die;
   }
 
   if ($auth_data['pass'] !== $auth_data['pass2']) {
     $_SESSION['error'] = 'Пароли не совпадают';
-    header("Location: " . get_url('register.php'));
+    redirect(get_url('register.php'));
     die;
   }
 
   if (add_user($auth_data['login'], $auth_data['pass'])) {
-    header("Location: " . get_url());
+    redirect(get_url());
     die;
   }
 }
@@ -119,18 +129,18 @@ function login($auth_data)
 
   if (empty($user)) {
     $_SESSION['error'] = 'Пользователь ' . $auth_data['login'] . ' не найден';
-    header("Location: " . get_url());
+    redirect(get_url());
     die;
   }
 
   if (password_verify($auth_data['pass'], $user['pass'])) {
     $_SESSION['user'] = $user;
     $_SESSION['error'] = '';
-    header("Location: " . get_url('user_posts.php?id=' . $user['id']));
+    redirect(get_url('user_posts.php?id=' . $user['id']));
     die;
   } else {
     $_SESSION['error'] = 'Пароль неверный';
-    header("Location: " . get_url('user_posts.php'));
+    redirect(get_url('user_posts.php'));
     die;
   }
 
@@ -146,4 +156,27 @@ function get_error_message()
   }
 
   return $error;
+}
+
+function logged_in()
+{
+  return isset($_SESSION['user']['id']) && !empty($_SESSION['user']['id']);
+}
+
+function add_post($text, $image)
+{
+  $text = trim($text);
+  if (mb_strlen($text) > 255) {
+    $text = mb_substr($text, 0, 250) . ' ...';
+  }
+
+  $user_id = $_SESSION['user']['id'];
+  $sql = "INSERT INTO `posts`(`user_id`, `text`, `image`) VALUES ('$user_id', '$text', '$image');";
+  return db_query($sql, true);
+}
+
+function delete_post($id)
+{
+  $user_id = $_SESSION['user']['id'];
+  return db_query("DELETE FROM `posts` WHERE `id` = $id AND `user_id` = $user_id;", true);
 }

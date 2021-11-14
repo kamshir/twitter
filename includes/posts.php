@@ -12,7 +12,9 @@
                     <a href="<?= get_url("user_posts.php?id=" . $post['user_id']) ?>" class="tweet-author__add tweet-author__nickname">@<?= $post['login'] ?></a>
                     <time class="tweet-author__add tweet__date"><?= date('d M Y в H:i', strtotime($post['date'])) ?></time>
                   </h3>
-                  <button class="tweet__delete-button chest-icon"></button>
+                  <?php if ($post['user_id'] == $_SESSION['user']['id']) : ?>
+                    <a href="<?= get_url('includes/delete_post.php?id=' . $post['id']) ?>" class="tweet__delete-button chest-icon"></a>
+                  <?php endif; ?>
                 </header>
                 <div class="tweet-post">
                   <p class="tweet-post__text"><?= $post['text'] ?></p>
@@ -33,5 +35,5 @@
     </ul>
   </section>
 <?php else : ?>
-  <p>Постов нет</p>
+  <h2 class="tweet-form__title">Здесь пока нет никаких твитов ...</h2>
 <?php endif; ?>
