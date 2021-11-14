@@ -1,9 +1,26 @@
 <?php
 include_once "config.php";
 
+function debug($var, $stop = false)
+{
+  echo '<pre>';
+  print_r($var);
+  echo '</pre>';
+  if ($stop) die;
+}
+
 function get_url($page = '')
 {
   return HOST . "/$page";
+}
+
+function get_page_title($title = '')
+{
+  if (!empty($title)) {
+    return SITE_NAME . " | $title";
+  } else {
+    return SITE_NAME;
+  }
 }
 
 function db()
@@ -41,8 +58,9 @@ function get_posts($user_id = 0)
       FROM `posts`
       JOIN `users`
       ON users.id = posts.user_id
-      WHERE posts.user_id = $user_id;"
-    );
+      WHERE posts.user_id = $user_id
+      ORDER BY posts.text DESC"
+    )->fetchAll();
   }
 
   return db_query(
@@ -50,5 +68,82 @@ function get_posts($user_id = 0)
     FROM `posts`
     JOIN `users`
     ON users.id = posts.user_id"
-  );
+  )->fetchAll();
+}
+
+function get_user_info($login)
+{
+  return db_query(
+    "SELECT * 
+    FROM `users` 
+    WHERE `login` = '$login';"
+  )->fetch();
+}
+
+function add_user($login, $pass)
+{
+  $login = trim($login);
+  $name = ucfirst($login);
+  $password = password_hash($pass, PASSWORD_DEFAULT);
+  return db_query("INSERT INTO `users`(`login`, `pass`, `name`) VALUES ('$login', '$password', '$name')", true);
+}
+
+function register_user($auth_data)
+{
+  if (empty($auth_data) || !isset($auth_data['login']) || empty($auth_data['login'])) return false;
+
+  $user = get_user_info($auth_data['login']);
+  if (!empty($user)) {
+    $_SESSION['error'] = 'Пользователь ' . $auth_data['login'] . ' уже существует';
+    header("Location: " . get_url('register.php'));
+    die;
+  }
+
+  if ($auth_data['pass'] !== $auth_data['pass2']) {
+    $_SESSION['error'] = 'Пароли не совпадают';
+    header("Location: " . get_url('register.php'));
+    die;
+  }
+
+  if (add_user($auth_data['login'], $auth_data['pass'])) {
+    header("Location: " . get_url());
+    die;
+  }
+}
+
+function login($auth_data)
+{
+  if (empty($auth_data) || !isset($auth_data['login']) || empty($auth_data['login'])) return false;
+
+  $user = get_user_info($auth_data['login']);
+
+  if (empty($user)) {
+    $_SESSION['error'] = 'Пользователь ' . $auth_data['login'] . ' не найден';
+    header("Location: " . get_url());
+    die;
+  }
+
+  if (password_verify($auth_data['pass'], $user['pass'])) {
+    $_SESSION['user'] = $user;
+    $_SESSION['error'] = '';
+    header("Location: " . get_url('user_posts.php?id=' . $user['id']));
+    die;
+  } else {
+    $_SESSION['error'] = 'Пароль неверный';
+    header("Location: " . get_url('user_posts.php'));
+    die;
+  }
+
+  debug($auth_data, true);
+}
+
+function get_error_message()
+{
+  $error = '';
+  if (isset($_SESSION['error']) && !empty($_SESSION['error'])) {
+    $error = $_SESSION['error'];
+    $_SESSION['error'] = '';
+  }
+
+  return $error;
 }

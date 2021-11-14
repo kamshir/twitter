@@ -7,12 +7,14 @@
     </div>
     <section class="wrapper">
       <h2 class="tweet-form__title">Введите логин и пароль</h2>
-      <div class="tweet-form__error">Что-то пошло не так</div>
+      <?php if ($error) : ?>
+        <div class="tweet-form__error"><?= $error ?></div>
+      <?php endif; ?>
       <div class="tweet-form__subtitle">Если у вас нет логина, пройдите <a href="<?= get_url("register.php") ?>">регистрацию</a></div>
-      <form class="tweet-form">
+      <form class="tweet-form" method="post" action="<?= get_url('includes/sign_in.php') ?>">
         <div class="tweet-form__wrapper_inputs">
-          <input type="text" class="tweet-form__input" placeholder="Логин" required>
-          <input type="password" class="tweet-form__input" placeholder="Пароль" required>
+          <input type="text" class="tweet-form__input" name="login" placeholder="Логин" required>
+          <input type="password" class="tweet-form__input" name="pass" placeholder="Пароль" required>
         </div>
         <div class="tweet-form__btns_center">
           <button class="tweet-form__btn_center" type="submit">Войти</button>
@@ -22,6 +24,11 @@
   </div>
 </div>
 <script src="<?= get_url("js/scripts.js") ?>"></script>
+<?php if ($error) : ?>
+  <script>
+    openModal()
+  </script>
+<?php endif; ?>
 </body>
 
 </html>
